@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quickbank
+  labels:
+    app: quickbank
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quickbank
+  template:
+    metadata:
+      labels:
+        app: quickbank
+    spec:
+      containers:
+      - name: quickbank
+        image: quay.io/sjbylo/quickbank:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: CLUSTER_NAME
+          value: "my-cluster"
+        - name: APP_COLOR
+          value: "blue"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"

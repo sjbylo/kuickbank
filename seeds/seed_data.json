@@ -1,0 +1,37 @@
+{
+  "account": {
+    "account_number": "1001-2345-6789",
+    "name": "QuickBank Demo",
+    "balance": 10000.00
+  },
+  "transactions": [
+    {
+      "type": "deposit",
+      "amount": 10000.00,
+      "description": "Initial deposit",
+      "balance_after": 10000.00,
+      "timestamp": "2026-01-15T09:00:00"
+    },
+    {
+      "type": "withdrawal",
+      "amount": 250.00,
+      "description": "ATM Withdrawal",
+      "balance_after": 9750.00,
+      "timestamp": "2026-01-16T14:30:00"
+    },
+    {
+      "type": "deposit",
+      "amount": 1500.00,
+      "description": "Salary deposit",
+      "balance_after": 11250.00,
+      "timestamp": "2026-01-20T08:00:00"
+    },
+    {
+      "type": "withdrawal",
+      "amount": 1250.00,
+      "description": "Rent payment",
+      "balance_after": 10000.00,
+      "timestamp": "2026-01-25T10:15:00"
+    }
+  ]
+}

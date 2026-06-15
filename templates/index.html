@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickBank</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header>
+    <div class="header-inner">
+        <h1>QuickBank</h1>
+        <span class="cluster-badge" style="background-color: {{ app_color }};">
+            {{ cluster_name }}
+        </span>
+    </div>
+</header>
+
+<main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages">
+        {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <section class="account-card">
+        <div class="account-label">Account {{ account.account_number }}</div>
+        <div class="account-name">{{ account.name }}</div>
+        <div class="balance">${{ "{:,.2f}".format(account.balance) }}</div>
+    </section>
+
+    <section class="quick-actions">
+        <h2>Quick Deposit</h2>
+        <div class="button-row deposit-row">
+            {% for amt in [100, 500, 1000, 5000] %}
+            <form method="post" action="{{ url_for('deposit') }}">
+                <input type="hidden" name="amount" value="{{ amt }}">
+                <button type="submit" class="btn btn-deposit">+${{ "{:,}".format(amt) }}</button>
+            </form>
+            {% endfor %}
+        </div>
+
+        <h2>Quick Withdraw</h2>
+        <div class="button-row withdraw-row">
+            {% for amt in [100, 500, 1000, 5000] %}
+            <form method="post" action="{{ url_for('withdraw') }}">
+                <input type="hidden" name="amount" value="{{ amt }}">
+                <button type="submit" class="btn btn-withdraw">-${{ "{:,}".format(amt) }}</button>
+            </form>
+            {% endfor %}
+        </div>
+
+        <details class="custom-amount">
+            <summary>Custom amount</summary>
+            <div class="custom-form">
+                <input type="number" id="custom-amount" min="1" max="50000" step="0.01" placeholder="Enter amount">
+                <div class="custom-buttons">
+                    <form method="post" action="{{ url_for('deposit') }}" id="custom-deposit-form">
+                        <input type="hidden" name="amount" id="custom-deposit-amount">
+                        <button type="submit" class="btn btn-deposit" onclick="setCustomAmount('deposit')">Deposit</button>
+                    </form>
+                    <form method="post" action="{{ url_for('withdraw') }}" id="custom-withdraw-form">
+                        <input type="hidden" name="amount" id="custom-withdraw-amount">
+                        <button type="submit" class="btn btn-withdraw" onclick="setCustomAmount('withdraw')">Withdraw</button>
+                    </form>
+                </div>
+            </div>
+        </details>
+    </section>
+
+    <section class="transactions">
+        <h2>Recent Transactions</h2>
+        {% if transactions %}
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th class="amount-col">Amount</th>
+                        <th class="amount-col">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in transactions %}
+                    <tr>
+                        <td class="date-cell">{{ tx.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>{{ tx.description }}</td>
+                        <td class="amount-col {{ 'positive' if tx.type == 'deposit' else 'negative' }}">
+                            {{ '+' if tx.type == 'deposit' else '-' }}${{ "{:,.2f}".format(tx.amount) }}
+                        </td>
+                        <td class="amount-col">${{ "{:,.2f}".format(tx.balance_after) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="no-transactions">No transactions yet.</p>
+        {% endif %}
+    </section>
+</main>
+
+<footer>
+    <div class="footer-inner">
+        <span>Host: {{ hostname }}</span>
+        <span>Cluster: {{ cluster_name }}</span>
+        <span>DB: {{ db_type }}</span>
+        <span>{{ "%.1f"|format(response_time) }}ms</span>
+        <span>Rate limit: {{ "ON" if rate_limit_on else "OFF" }}</span>
+        {% if reset_interval > 0 %}
+        <span id="reset-countdown" data-remaining="{{ reset_remaining }}">
+            Reset in {{ "%d:%02d"|format(reset_remaining // 60, reset_remaining % 60) }}
+        </span>
+        {% endif %}
+    </div>
+</footer>
+
+<script>
+function setCustomAmount(type) {
+    var val = document.getElementById('custom-amount').value;
+    if (type === 'deposit') {
+        document.getElementById('custom-deposit-amount').value = val;
+    } else {
+        document.getElementById('custom-withdraw-amount').value = val;
+    }
+}
+
+// Countdown timer for auto-reset
+(function() {
+    var el = document.getElementById('reset-countdown');
+    if (!el) return;
+    var remaining = parseInt(el.dataset.remaining, 10);
+    setInterval(function() {
+        remaining--;
+        if (remaining < 0) remaining = 0;
+        var m = Math.floor(remaining / 60);
+        var s = remaining % 60;
+        el.textContent = 'Reset in ' + m + ':' + (s < 10 ? '0' : '') + s;
+    }, 1000);
+})();
+</script>
+
+</body>
+</html>

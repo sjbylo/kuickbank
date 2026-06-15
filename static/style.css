@@ -1,0 +1,293 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+    background: #f0f2f5;
+    color: #1a1a2e;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background: #1a1a2e;
+    color: #fff;
+    padding: 1rem 1.5rem;
+}
+
+.header-inner {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.cluster-badge {
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+main {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    width: 100%;
+    flex: 1;
+}
+
+.flash-messages {
+    margin-bottom: 1rem;
+}
+
+.flash {
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.flash.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.flash.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.account-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+}
+
+.account-label {
+    font-size: 0.85rem;
+    color: #6c757d;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.account-name {
+    font-size: 1.1rem;
+    color: #495057;
+    margin: 0.25rem 0 0.75rem;
+}
+
+.balance {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    letter-spacing: -1px;
+}
+
+.quick-actions {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+}
+
+.quick-actions h2 {
+    font-size: 1rem;
+    color: #495057;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.button-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.btn {
+    padding: 0.9rem 0.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    color: #fff;
+    width: 100%;
+}
+
+.btn:active {
+    transform: scale(0.96);
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+.btn-deposit {
+    background: #28a745;
+}
+
+.btn-withdraw {
+    background: #dc3545;
+}
+
+.custom-amount {
+    margin-top: 0.5rem;
+}
+
+.custom-amount summary {
+    cursor: pointer;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.custom-form {
+    margin-top: 0.75rem;
+}
+
+.custom-form input[type="number"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    -moz-appearance: textfield;
+}
+
+.custom-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
+.transactions {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.transactions h2 {
+    font-size: 1rem;
+    color: #495057;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+thead th {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 2px solid #dee2e6;
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+tbody td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.amount-col {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.positive {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.negative {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.date-cell {
+    white-space: nowrap;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+.no-transactions {
+    text-align: center;
+    color: #adb5bd;
+    padding: 2rem;
+}
+
+footer {
+    background: #1a1a2e;
+    color: #adb5bd;
+    padding: 0.75rem 1.5rem;
+    font-size: 0.75rem;
+    margin-top: auto;
+}
+
+.footer-inner {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: center;
+}
+
+@media (max-width: 600px) {
+    .balance {
+        font-size: 2.2rem;
+    }
+
+    .button-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .btn {
+        padding: 1rem 0.5rem;
+        font-size: 1.1rem;
+    }
+
+    .footer-inner {
+        flex-direction: column;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .date-cell {
+        font-size: 0.75rem;
+    }
+}
