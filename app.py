@@ -220,14 +220,14 @@ def deposit():
 
         account.balance = Account.balance + amount
         db.session.flush()
-        refreshed = Account.query.get(account.id)
+        db.session.refresh(account)
 
         tx = Transaction(
             account_id=account.id,
             type='deposit',
             amount=amount,
             description=f'Deposit ${amount:,.2f}',
-            balance_after=refreshed.balance,
+            balance_after=account.balance,
             timestamp=datetime.now(timezone.utc)
         )
         db.session.add(tx)
@@ -265,14 +265,14 @@ def withdraw():
 
         account.balance = Account.balance - amount
         db.session.flush()
-        refreshed = Account.query.get(account.id)
+        db.session.refresh(account)
 
         tx = Transaction(
             account_id=account.id,
             type='withdrawal',
             amount=amount,
             description=f'Withdrawal ${amount:,.2f}',
-            balance_after=refreshed.balance,
+            balance_after=account.balance,
             timestamp=datetime.now(timezone.utc)
         )
         db.session.add(tx)
