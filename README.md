@@ -1,4 +1,4 @@
-# quickbank
+# kuickbank
 
 A sample FSI (Financial Services Industry) banking demo application written in Python (Flask).
 
@@ -8,15 +8,15 @@ The repo has been designed to make it easy to build and run on OpenShift.
 
 This application is intended for demo use only.
 
-[![Docker Repository on Quay](https://quay.io/repository/sjbylo/quickbank/status "Docker Repository on Quay")](https://quay.io/repository/sjbylo/quickbank)
+[![Docker Repository on Quay](https://quay.io/repository/sjbylo/kuickbank/status "Docker Repository on Quay")](https://quay.io/repository/sjbylo/kuickbank)
 
 ## Local deployment
 
 This application can be deployed locally. Install git and clone the repository:
 
 ```
-git clone https://github.com/sjbylo/quickbank
-cd quickbank
+git clone https://github.com/sjbylo/kuickbank
+cd kuickbank
 ```
 
 Install the dependencies:
@@ -51,7 +51,7 @@ Cluster: my-laptop | Color: blue
 View the app in the browser at http://localhost:8080/. The test script can also be used to test the app:
 
 ```
-./test-quickbank.sh http://localhost:8080
+./test-kuickbank.sh http://localhost:8080
 ```
 
 The initial account and transactions are loaded from a JSON file called ``seed_data.json`` under the ``./seeds`` directory.
@@ -62,10 +62,10 @@ To use an external PostgreSQL database, set the environment variables by editing
 
 ```
 nano flask.rc
-export PS1='[\u(quickbank)]\> '
+export PS1='[\u(kuickbank)]\> '
 export ENDPOINT_ADDRESS=db
 export PORT=5432
-export DB_NAME=quickbank
+export DB_NAME=kuickbank
 export MASTER_USERNAME=bankuser
 export MASTER_PASSWORD=password
 export DB_TYPE=postgresql
@@ -91,14 +91,14 @@ rm -f data/app.db    # optionally remove the database
 The app can be run by pulling the image from quay.io:
 
 ```
-podman run -d --rm -p 8080:8080 --name=quickbank quay.io/sjbylo/quickbank
+podman run -d --rm -p 8080:8080 --name=kuickbank quay.io/sjbylo/kuickbank
 curl http://localhost:8080/
 ```
 
 Stop the container:
 
 ```
-podman stop quickbank
+podman stop kuickbank
 ```
 
 ## Docker/Podman build and deployment
@@ -108,28 +108,28 @@ A Dockerfile is provided in the repository to build a container image.
 Clone the repository:
 
 ```
-git clone https://github.com/sjbylo/quickbank
-cd quickbank
+git clone https://github.com/sjbylo/kuickbank
+cd kuickbank
 ```
 
 Build the image:
 
 ```
-podman build -t quickbank:latest .
+podman build -t kuickbank:latest .
 podman images
 ```
 
 Start the container:
 
 ```
-podman run -d -p 8080:8080 --name=quickbank quickbank:latest
+podman run -d -p 8080:8080 --name=kuickbank kuickbank:latest
 ```
 
 The seed data directory can be mounted as an external volume:
 
 ```
 cp seeds/seed_data.json /tmp/
-podman run -d -p 8080:8080 -v /tmp:/app/seeds:Z --name=quickbank quickbank:latest
+podman run -d -p 8080:8080 -v /tmp:/app/seeds:Z --name=kuickbank kuickbank:latest
 ```
 
 An external PostgreSQL database can be used instead of the internal SQLite by setting env variables:
@@ -137,17 +137,17 @@ An external PostgreSQL database can be used instead of the internal SQLite by se
 ```
 podman run -e ENDPOINT_ADDRESS=db \
            -e PORT=5432 \
-           -e DB_NAME=quickbank \
+           -e DB_NAME=kuickbank \
            -e MASTER_USERNAME=bankuser \
            -e MASTER_PASSWORD=password \
            -e DB_TYPE=postgresql \
-           -d -p 8080:8080 --name=quickbank quickbank:latest
+           -d -p 8080:8080 --name=kuickbank kuickbank:latest
 ```
 
 Cleanup:
 
 ```
-podman stop quickbank && podman rm quickbank
+podman stop kuickbank && podman rm kuickbank
 ```
 
 ## Install the app onto OpenShift
@@ -155,19 +155,19 @@ podman stop quickbank && podman rm quickbank
 Build and launch the app:
 
 ```
-oc new-app python~https://github.com/sjbylo/quickbank.git --name quickbank
+oc new-app python~https://github.com/sjbylo/kuickbank.git --name kuickbank
 ```
 
 As an alternative to the above build, pull the latest image from quay.io registry:
 
 ```
-oc new-app --docker-image=quay.io/sjbylo/quickbank:latest --name quickbank
+oc new-app --docker-image=quay.io/sjbylo/kuickbank:latest --name kuickbank
 ```
 
 Expose the app to the external network:
 
 ```
-oc expose svc quickbank
+oc expose svc kuickbank
 ```
 
 Start a database (optional, if shared state across pods is required):
@@ -176,16 +176,16 @@ Start a database (optional, if shared state across pods is required):
 oc new-app --name db postgresql:15 \
   -e POSTGRESQL_USER=bankuser \
   -e POSTGRESQL_PASSWORD=password \
-  -e POSTGRESQL_DATABASE=quickbank
+  -e POSTGRESQL_DATABASE=kuickbank
 ```
 
 Connect the app to the DB:
 
 ```
-oc set env deploy quickbank \
+oc set env deploy kuickbank \
    ENDPOINT_ADDRESS=db \
    PORT=5432 \
-   DB_NAME=quickbank \
+   DB_NAME=kuickbank \
    MASTER_USERNAME=bankuser \
    MASTER_PASSWORD=password \
    DB_TYPE=postgresql
@@ -198,32 +198,32 @@ To easily develop this application, we can make changes to the local files and t
 To do this we create a 'binary' build. Binary is referring to the way the local directory is sent or "streamed" to the build pod using tar.
 
 ```
-oc new-build python --name quickbank --binary
+oc new-build python --name kuickbank --binary
 ```
 
 Start the build. This will upload the app code from the current working dir:
 
 ```
-oc start-build quickbank --from-dir=. --follow
+oc start-build kuickbank --from-dir=. --follow
 ```
 
 Wait for the build to complete. Launch the app:
 
 ```
-oc new-app quickbank
+oc new-app kuickbank
 ```
 
 Expose the app to the external network:
 
 ```
-oc expose svc quickbank
+oc expose svc kuickbank
 ```
 
 Test the app:
 
 ```
-QUICKBANK_URL=$(oc get route quickbank --template='{{.spec.host}}')
-./test-quickbank.sh http://$QUICKBANK_URL
+QUICKBANK_URL=$(oc get route kuickbank --template='{{.spec.host}}')
+./test-kuickbank.sh http://$QUICKBANK_URL
 open http://$QUICKBANK_URL/
 ```
 
@@ -236,7 +236,7 @@ To re-build the app on the server, run the above ``oc start-build`` command agai
 |---|---|---|
 | `ENDPOINT_ADDRESS` | _(empty = SQLite)_ | Database host address |
 | `PORT` | `5432` (pg) / `3306` (mysql) | Database port |
-| `DB_NAME` | `quickbank` | Database name |
+| `DB_NAME` | `kuickbank` | Database name |
 | `MASTER_USERNAME` | `bankuser` | Database username |
 | `MASTER_PASSWORD` | _(empty)_ | Database password |
 | `DB_TYPE` | `sqlite` | `sqlite`, `postgresql`, or `mysql` |
@@ -255,7 +255,7 @@ The format is:
 {
   "account": {
     "account_number": "1001-2345-6789",
-    "name": "QuickBank Demo",
+    "name": "KuickBank Demo",
     "balance": 10000.00
   },
   "transactions": [

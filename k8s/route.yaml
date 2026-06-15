@@ -1,13 +1,13 @@
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: quickbank
+  name: kuickbank
   labels:
-    app: quickbank
+    app: kuickbank
 spec:
   to:
     kind: Service
-    name: quickbank
+    name: kuickbank
     weight: 100
   port:
     targetPort: 8080

@@ -20,7 +20,7 @@ app.secret_key = os.urandom(24)
 DB_TYPE = os.environ.get('DB_TYPE', 'sqlite').lower()
 ENDPOINT_ADDRESS = os.environ.get('ENDPOINT_ADDRESS', '')
 PORT = os.environ.get('PORT', '5432' if DB_TYPE == 'postgresql' else '3306')
-DB_NAME = os.environ.get('DB_NAME', 'quickbank')
+DB_NAME = os.environ.get('DB_NAME', 'kuickbank')
 MASTER_USERNAME = os.environ.get('MASTER_USERNAME', 'bankuser')
 MASTER_PASSWORD = os.environ.get('MASTER_PASSWORD', '')
 
@@ -106,7 +106,7 @@ def load_seed_data():
         with open(seed_file) as f:
             return json.load(f)
     return {
-        "account": {"account_number": "1001-2345-6789", "name": "QuickBank Demo", "balance": SEED_BALANCE},
+        "account": {"account_number": "1001-2345-6789", "name": "KuickBank Demo", "balance": SEED_BALANCE},
         "transactions": []
     }
 
@@ -157,7 +157,7 @@ def auto_reset_worker():
         if remaining <= 0:
             with reset_lock:
                 with app.app_context():
-                    print(f"[QuickBank] Auto-resetting account (every {RESET_INTERVAL}s)")
+                    print(f"[KuickBank] Auto-resetting account (every {RESET_INTERVAL}s)")
                     seed_database()
         else:
             time.sleep(min(remaining, 5))

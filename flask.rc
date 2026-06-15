@@ -1,7 +1,7 @@
-export PS1='[\u(quickbank)]\> '
+export PS1='[\u(kuickbank)]\> '
 export ENDPOINT_ADDRESS=db
 export PORT=5432
-export DB_NAME=quickbank
+export DB_NAME=kuickbank
 export MASTER_USERNAME=bankuser
 export MASTER_PASSWORD=password
 export DB_TYPE=postgresql

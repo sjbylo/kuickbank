@@ -1,7 +1,7 @@
 {
   "account": {
     "account_number": "1001-2345-6789",
-    "name": "QuickBank Demo",
+    "name": "KuickBank Demo",
     "balance": 10000.00
   },
   "transactions": [

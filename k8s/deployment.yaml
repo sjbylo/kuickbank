@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: quickbank
+  name: kuickbank
   labels:
-    app: quickbank
+    app: kuickbank
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: quickbank
+      app: kuickbank
   template:
     metadata:
       labels:
-        app: quickbank
+        app: kuickbank
     spec:
       containers:
-      - name: quickbank
-        image: quay.io/sjbylo/quickbank:latest
+      - name: kuickbank
+        image: quay.io/sjbylo/kuickbank:latest
         ports:
         - containerPort: 8080
         env:

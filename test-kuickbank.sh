@@ -1,10 +1,10 @@
 #!/bin/bash
-# Simple smoke test for QuickBank
-# Usage: ./test-quickbank.sh [URL]
+# Simple smoke test for KuickBank
+# Usage: ./test-kuickbank.sh [URL]
 
 URL=${1:-http://localhost:8080}
 
-echo "Testing QuickBank at $URL"
+echo "Testing KuickBank at $URL"
 echo "================================"
 
 echo -n "Health check ... "
