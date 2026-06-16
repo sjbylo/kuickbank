@@ -27,7 +27,7 @@ MASTER_PASSWORD = os.environ.get('MASTER_PASSWORD', '')
 CLUSTER_NAME = os.environ.get('CLUSTER_NAME', socket.gethostname())
 APP_COLOR = os.environ.get('APP_COLOR', 'blue')
 RESET_INTERVAL = int(os.environ.get('RESET_INTERVAL', '600'))
-RATE_LIMIT_ENABLED = os.environ.get('RATE_LIMIT_ENABLED', 'true').lower() == 'true'
+RATE_LIMIT_DEFAULT = os.environ.get('RATE_LIMIT_ENABLED', 'true').lower() == 'true'
 
 MAX_TRANSACTION = 50000
 SEED_BALANCE = 10000
@@ -48,14 +48,32 @@ else:
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+if DB_TYPE == 'postgresql':
+    engine_opts = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'pool_size': 3,
+        'max_overflow': 2,
+        'pool_timeout': 5,
+        'connect_args': {'timeout': 5},
+    }
+elif DB_TYPE == 'sqlite':
+    engine_opts = {'pool_pre_ping': True, 'connect_args': {'timeout': 10}}
+else:
+    engine_opts = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+        'pool_size': 3,
+        'max_overflow': 2,
+        'pool_timeout': 5,
+    }
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = engine_opts
 
 db = SQLAlchemy(app)
 
 # ---------------------------------------------------------------------------
-# Rate limiter (toggleable at runtime)
+# Rate limiter (toggleable at runtime, state stored in DB)
 # ---------------------------------------------------------------------------
-rate_limit_enabled = RATE_LIMIT_ENABLED
-
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -95,6 +113,50 @@ class Transaction(db.Model):
     description = db.Column(db.String(200), nullable=False)
     balance_after = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
+class Settings(db.Model):
+    __tablename__ = 'settings'
+    key = db.Column(db.String(50), primary_key=True)
+    value = db.Column(db.String(200), nullable=False)
+
+
+def is_rate_limit_enabled():
+    """Check rate-limit state from DB (shared across all pods/clusters)."""
+    try:
+        row = db.session.get(Settings, 'rate_limit_enabled')
+        if row is None:
+            return RATE_LIMIT_DEFAULT
+        return row.value == 'true'
+    except Exception:
+        return RATE_LIMIT_DEFAULT
+
+
+def set_rate_limit_enabled(enabled: bool):
+    """Persist rate-limit state to DB."""
+    row = db.session.get(Settings, 'rate_limit_enabled')
+    if row is None:
+        row = Settings(key='rate_limit_enabled', value=str(enabled).lower())
+        db.session.add(row)
+    else:
+        row.value = str(enabled).lower()
+    db.session.commit()
+
+
+MAX_TRANSACTIONS = 20
+
+
+def _prune_transactions(account_id):
+    """Delete all but the most recent MAX_TRANSACTIONS rows."""
+    keep = (db.session.query(Transaction.id)
+            .filter_by(account_id=account_id)
+            .order_by(Transaction.timestamp.desc())
+            .limit(MAX_TRANSACTIONS)
+            .subquery())
+    Transaction.query.filter(
+        Transaction.account_id == account_id,
+        ~Transaction.id.in_(db.session.query(keep))
+    ).delete(synchronize_session=False)
 
 
 # ---------------------------------------------------------------------------
@@ -175,7 +237,7 @@ def index():
         account = Account.query.first()
 
     transactions = Transaction.query.filter_by(account_id=account.id)\
-        .order_by(Transaction.timestamp.desc()).limit(50).all()
+        .order_by(Transaction.timestamp.desc()).limit(20).all()
 
     elapsed_ms = round((time.time() - start) * 1000, 1)
 
@@ -190,14 +252,14 @@ def index():
                            app_color=APP_COLOR,
                            hostname=socket.gethostname(),
                            response_time=elapsed_ms,
-                           rate_limit_on=rate_limit_enabled,
+                           rate_limit_on=is_rate_limit_enabled(),
                            reset_remaining=reset_remaining,
                            reset_interval=RESET_INTERVAL,
                            db_type=DB_TYPE)
 
 
 @app.route('/deposit', methods=['POST'])
-@limiter.limit(TRANSACTION_LIMIT, exempt_when=lambda: not rate_limit_enabled)
+@limiter.limit(TRANSACTION_LIMIT, exempt_when=lambda: not is_rate_limit_enabled())
 def deposit():
     try:
         amount = float(request.form.get('amount', 0))
@@ -231,6 +293,8 @@ def deposit():
             timestamp=datetime.now(timezone.utc)
         )
         db.session.add(tx)
+        db.session.flush()
+        _prune_transactions(account.id)
         db.session.commit()
 
     flash(f'Deposited ${amount:,.2f}', 'success')
@@ -238,7 +302,7 @@ def deposit():
 
 
 @app.route('/withdraw', methods=['POST'])
-@limiter.limit(TRANSACTION_LIMIT, exempt_when=lambda: not rate_limit_enabled)
+@limiter.limit(TRANSACTION_LIMIT, exempt_when=lambda: not is_rate_limit_enabled())
 def withdraw():
     try:
         amount = float(request.form.get('amount', 0))
@@ -276,6 +340,8 @@ def withdraw():
             timestamp=datetime.now(timezone.utc)
         )
         db.session.add(tx)
+        db.session.flush()
+        _prune_transactions(account.id)
         db.session.commit()
 
     flash(f'Withdrew ${amount:,.2f}', 'success')
@@ -289,22 +355,22 @@ def health():
 
 @app.route('/admin/ratelimit/on')
 def ratelimit_on():
-    global rate_limit_enabled
-    rate_limit_enabled = True
-    return jsonify({"rate_limiting": "enabled"}), 200
+    set_rate_limit_enabled(True)
+    return jsonify({"rate_limiting": "enabled", "scope": "global"}), 200
 
 
 @app.route('/admin/ratelimit/off')
 def ratelimit_off():
-    global rate_limit_enabled
-    rate_limit_enabled = False
-    return jsonify({"rate_limiting": "disabled"}), 200
+    set_rate_limit_enabled(False)
+    return jsonify({"rate_limiting": "disabled", "scope": "global"}), 200
 
 
 @app.route('/admin/ratelimit/status')
 def ratelimit_status():
+    enabled = is_rate_limit_enabled()
     return jsonify({
-        "rate_limiting": "enabled" if rate_limit_enabled else "disabled",
+        "rate_limiting": "enabled" if enabled else "disabled",
+        "scope": "global",
         "limits": TRANSACTION_LIMIT
     }), 200
 
@@ -328,11 +394,36 @@ if __name__ == '__main__':
     with app.app_context():
         print("Check if account already exists in the db")
         db.create_all()
-        if not Account.query.first():
-            print("Seeding database with initial data ...")
-            seed_database()
-        else:
-            print("Account found, skipping seed")
+        try:
+            if not Account.query.first():
+                print("Seeding database with initial data ...")
+                seed = load_seed_data()
+                acct_data = seed['account']
+                account = Account(
+                    account_number=acct_data['account_number'],
+                    name=acct_data['name'],
+                    balance=acct_data['balance']
+                )
+                db.session.add(account)
+                db.session.flush()
+                for tx in seed.get('transactions', []):
+                    t = Transaction(
+                        account_id=account.id,
+                        type=tx['type'],
+                        amount=tx['amount'],
+                        description=tx['description'],
+                        balance_after=tx['balance_after'],
+                        timestamp=datetime.fromisoformat(tx['timestamp'])
+                    )
+                    db.session.add(t)
+                db.session.commit()
+                last_reset_time = time.time()
+                print("Database seeded")
+            else:
+                print("Account found, skipping seed")
+        except Exception as e:
+            db.session.rollback()
+            print(f"Seed check failed (another pod may own init): {e}")
 
     if RESET_INTERVAL > 0:
         reset_thread = threading.Thread(target=auto_reset_worker, daemon=True)
@@ -341,7 +432,9 @@ if __name__ == '__main__':
     else:
         print("Auto-reset disabled")
 
-    print(f"Rate limiting: {'ON' if rate_limit_enabled else 'OFF'}")
+    with app.app_context():
+        rl = is_rate_limit_enabled()
+    print(f"Rate limiting: {'ON' if rl else 'OFF'} (global, stored in DB)")
     print(f"Database: {DB_TYPE} ({'external' if ENDPOINT_ADDRESS else 'internal'})")
     print(f"Cluster: {CLUSTER_NAME} | Color: {APP_COLOR}")
 

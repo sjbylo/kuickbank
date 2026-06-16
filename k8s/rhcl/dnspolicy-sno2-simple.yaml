@@ -1,0 +1,17 @@
+apiVersion: kuadrant.io/v1
+kind: DNSPolicy
+metadata:
+  name: kuickbank-dns
+  namespace: kuickbank
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: kuickbank-gateway
+  delegate: true
+  healthCheck:
+    path: /health
+    port: 443
+    protocol: HTTPS
+    interval: 30s
+    failureThreshold: 2
