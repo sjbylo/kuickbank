@@ -11,22 +11,21 @@ Browser                 RHCL Gateway (sno1-ext)              Game VM (lab)
   |                     192.168.2.203                        192.168.2.36
   |                          |                                   |
   |--- HTTPS (443) --------->|                                   |
-  |   game.demo.bylo.de      |--- HTTPS (9443) ---------------->|
-  |   TLS terminated         |   TLS originated by Envoy        |
-  |                          |   SNI: game.bylo.de              |
+  |   game.demo.bylo.de      |--- HTTP (8080) ----------------->|
+  |   TLS terminated         |   plain HTTP to backend          |
+  |                          |                                   |
   |<--- response ------------|<--- response --------------------|
 ```
 
 The gateway terminates the client TLS connection (self-signed cert) and
-re-encrypts to the backend VM using Istio TLS origination.
+forwards to the backend VM over plain HTTP. No TLS origination needed.
 
 ## VM Details
 
 The game VM (`192.168.2.36`) runs "Der Tippmeister" (FIFA World Cup 2026
 tipping game) and listens on:
 
-- **HTTPS port 9443** — main application endpoint (TLS)
-- **HTTP port 8080** — redirects all traffic to HTTPS
+- **HTTP port 8080** — serves the app directly over plain HTTP
 
 ## Resources (all in namespace `kuickbank` on sno1-ext)
 
@@ -59,7 +58,7 @@ spec:
 ### 2. HTTPRoute
 
 Binds to the Gateway and forwards matching requests to the `game-external`
-Service on port 9443.
+Service on port 8080.
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -75,7 +74,7 @@ spec:
   rules:
   - backendRefs:
     - name: game-external             # Headless Service pointing to the VM
-      port: 9443                      # VM's HTTPS port
+      port: 8080                      # VM's HTTP port
 ```
 
 ### 3. DNSPolicy
@@ -144,10 +143,9 @@ metadata:
 spec:
   clusterIP: None                     # Headless — no cluster IP allocated
   ports:
-  - port: 9443
-    targetPort: 9443
+  - port: 8080
+    targetPort: 8080
     protocol: TCP
-    appProtocol: https                # Tells Istio the backend speaks HTTPS
 ---
 apiVersion: discovery.k8s.io/v1
 kind: EndpointSlice
@@ -159,42 +157,22 @@ metadata:
 addressType: IPv4
 endpoints:
 - addresses:
-  - "192.168.2.36"                    # VM's lab network IP (not the public IP)
+  - "192.168.2.36"                    # VM's lab network IP
 ports:
-- port: 9443
+- port: 8080
   protocol: TCP
 ```
 
-### 6. Istio DestinationRule
+> **Note:** No `appProtocol: https` or Istio DestinationRule needed since
+> the backend serves plain HTTP. This is the simplest possible external
+> service configuration.
 
-Because the VM only accepts HTTPS on port 9443, the Envoy proxy in the
-gateway pod must originate a TLS connection to the backend.
+## Why not ExternalName?
 
-```yaml
-apiVersion: networking.istio.io/v1
-kind: DestinationRule
-metadata:
-  name: game-external-tls
-  namespace: kuickbank
-spec:
-  host: game-external.kuickbank.svc.cluster.local   # Matches the k8s Service FQDN
-  trafficPolicy:
-    tls:
-      mode: SIMPLE                    # Originate TLS (no client cert / no mTLS)
-      sni: game.bylo.de              # SNI the backend's TLS cert expects
-    portLevelSettings:
-    - port:
-        number: 9443
-      tls:
-        mode: SIMPLE
-        sni: game.bylo.de
-```
-
-> **Key values:**
-> - `mode: SIMPLE` — standard TLS without mutual authentication
-> - `sni: game.bylo.de` — the Server Name Indication sent during the TLS
->   handshake; must match the backend's certificate CN/SAN
-> - If the VM served plain HTTP, this DestinationRule would not be needed
+A `Service type: ExternalName` would be simpler (one resource instead of
+two), but Istio does not create Envoy upstream clusters for ExternalName
+services in Gateway API mode. The headless Service + EndpointSlice approach
+is the supported pattern.
 
 ## Testing
 
