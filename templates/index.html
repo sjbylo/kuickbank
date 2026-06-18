@@ -11,6 +11,7 @@
 <header>
     <div class="header-inner">
         <h1>KuickBank</h1>
+        <button id="auto-refresh-btn" onclick="toggleAutoRefresh()" class="btn-refresh">&#x25B6; Auto</button>
         <span class="cluster-badge" style="background-color: {{ app_color }};">
             {{ cluster_name }}
         </span>
@@ -18,16 +19,6 @@
 </header>
 
 <main>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    <div class="flash-messages">
-        {% for category, message in messages %}
-        <div class="flash {{ category }}">{{ message }}</div>
-        {% endfor %}
-    </div>
-    {% endif %}
-    {% endwith %}
-
     <section class="account-card">
         <div class="account-label">Account {{ account.account_number }}</div>
         <div class="account-name">{{ account.name }}</div>
@@ -55,23 +46,19 @@
             {% endfor %}
         </div>
 
-        <details class="custom-amount">
-            <summary>Custom amount</summary>
-            <div class="custom-form">
-                <input type="number" id="custom-amount" min="1" max="50000" step="0.01" placeholder="Enter amount">
-                <div class="custom-buttons">
-                    <form method="post" action="{{ url_for('deposit') }}" id="custom-deposit-form">
-                        <input type="hidden" name="amount" id="custom-deposit-amount">
-                        <button type="submit" class="btn btn-deposit" onclick="setCustomAmount('deposit')">Deposit</button>
-                    </form>
-                    <form method="post" action="{{ url_for('withdraw') }}" id="custom-withdraw-form">
-                        <input type="hidden" name="amount" id="custom-withdraw-amount">
-                        <button type="submit" class="btn btn-withdraw" onclick="setCustomAmount('withdraw')">Withdraw</button>
-                    </form>
-                </div>
-            </div>
-        </details>
     </section>
+
+    <div class="flash-banner">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% else %}
+            <div class="flash placeholder">&nbsp;</div>
+        {% endif %}
+        {% endwith %}
+    </div>
 
     <section class="transactions">
         <h2>Recent Transactions</h2>
@@ -122,14 +109,30 @@
 </footer>
 
 <script>
-function setCustomAmount(type) {
-    var val = document.getElementById('custom-amount').value;
-    if (type === 'deposit') {
-        document.getElementById('custom-deposit-amount').value = val;
+var autoRefreshTimer = null;
+var autoRefreshOn = localStorage.getItem('autoRefresh') !== 'off';
+
+function toggleAutoRefresh() {
+    autoRefreshOn = !autoRefreshOn;
+    localStorage.setItem('autoRefresh', autoRefreshOn ? 'on' : 'off');
+    updateRefreshState();
+}
+
+function updateRefreshState() {
+    var btn = document.getElementById('auto-refresh-btn');
+    if (autoRefreshOn) {
+        btn.textContent = '\u25A0 Auto';
+        btn.classList.add('refresh-on');
+        btn.classList.remove('refresh-off');
+        autoRefreshTimer = setTimeout(function() { location.reload(); }, 3000);
     } else {
-        document.getElementById('custom-withdraw-amount').value = val;
+        btn.textContent = '\u25B6 Auto';
+        btn.classList.remove('refresh-on');
+        btn.classList.add('refresh-off');
+        if (autoRefreshTimer) clearTimeout(autoRefreshTimer);
     }
 }
+updateRefreshState();
 
 // Countdown timer for auto-reset
 (function() {

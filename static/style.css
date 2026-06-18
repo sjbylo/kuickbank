@@ -50,28 +50,33 @@ main {
     flex: 1;
 }
 
-.flash-messages {
+.flash-banner {
+    min-height: 44px;
     margin-bottom: 1rem;
 }
 
 .flash {
     padding: 0.75rem 1rem;
     border-radius: 6px;
-    margin-bottom: 0.5rem;
     font-size: 0.9rem;
-    font-weight: 500;
+    font-weight: 600;
+    text-align: center;
+}
+
+.flash.placeholder {
+    visibility: hidden;
 }
 
 .flash.success {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    background: #15803d;
+    color: #ffffff;
+    border: 1px solid #16a34a;
 }
 
 .flash.error {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+    background: #b91c1c;
+    color: #ffffff;
+    border: 1px solid #dc2626;
 }
 
 .account-card {
@@ -146,41 +151,11 @@ main {
 }
 
 .btn-deposit {
-    background: #28a745;
+    background: #2563eb;
 }
 
 .btn-withdraw {
-    background: #dc3545;
-}
-
-.custom-amount {
-    margin-top: 0.5rem;
-}
-
-.custom-amount summary {
-    cursor: pointer;
-    color: #6c757d;
-    font-size: 0.9rem;
-}
-
-.custom-form {
-    margin-top: 0.75rem;
-}
-
-.custom-form input[type="number"] {
-    width: 100%;
-    padding: 0.75rem;
-    border: 2px solid #dee2e6;
-    border-radius: 8px;
-    font-size: 1rem;
-    margin-bottom: 0.5rem;
-    -moz-appearance: textfield;
-}
-
-.custom-buttons {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
+    background: #ea580c;
 }
 
 .transactions {
@@ -229,12 +204,12 @@ tbody td {
 }
 
 .positive {
-    color: #28a745;
+    color: #2563eb;
     font-weight: 600;
 }
 
 .negative {
-    color: #dc3545;
+    color: #ea580c;
     font-weight: 600;
 }
 
@@ -290,4 +265,22 @@ footer {
     .date-cell {
         font-size: 0.75rem;
     }
+}
+
+.btn-refresh {
+    padding: 0.3rem 0.7rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.btn-refresh.refresh-on {
+    background-color: #27ae60;
+    color: white;
+}
+.btn-refresh.refresh-off {
+    background-color: #555;
+    color: #ccc;
 }

@@ -1,7 +1,7 @@
-# RHCL External Service Route: game.demo.bylo.de
+# RHCL External Service Route: ext-vm.demo.bylo.de
 
 This document describes the RHCL (Red Hat Connectivity Link) configuration
-that routes traffic from `https://game.demo.bylo.de` through an Istio
+that routes traffic from `https://ext-vm.demo.bylo.de` through an Istio
 gateway on `sno1-ext` to an external VM on the lab network.
 
 Two backend configurations are covered:
@@ -13,11 +13,11 @@ Two backend configurations are covered:
 ### Option A: Plain HTTP backend
 
 ```
-Browser                 RHCL Gateway (sno1-ext)              Game VM (lab)
+Browser                 RHCL Gateway (sno1-ext)              VM (lab)
   |                     192.168.2.203                        192.168.2.36
   |                          |                                   |
   |--- HTTPS (443) --------->|                                   |
-  |   game.demo.bylo.de      |--- HTTP (8080) ----------------->|
+  |   ext-vm.demo.bylo.de    |--- HTTP (8080) ----------------->|
   |   TLS terminated         |   plain HTTP to backend          |
   |                          |                                   |
   |<--- response ------------|<--- response --------------------|
@@ -26,20 +26,19 @@ Browser                 RHCL Gateway (sno1-ext)              Game VM (lab)
 ### Option B: HTTPS backend
 
 ```
-Browser                 RHCL Gateway (sno1-ext)              Game VM (lab)
+Browser                 RHCL Gateway (sno1-ext)              VM (lab)
   |                     192.168.2.203                        192.168.2.36
   |                          |                                   |
   |--- HTTPS (443) --------->|                                   |
-  |   game.demo.bylo.de      |--- HTTPS (9443) ---------------->|
+  |   ext-vm.demo.bylo.de    |--- HTTPS (9443) ---------------->|
   |   TLS terminated         |   TLS originated by Envoy        |
-  |                          |   SNI: game.bylo.de              |
+  |                          |                                   |
   |<--- response ------------|<--- response --------------------|
 ```
 
 ## VM Details
 
-The game VM (`192.168.2.36`) runs "Der Tippmeister" (FIFA World Cup 2026
-tipping game). It can listen on:
+The external VM (`192.168.2.36`) can listen on:
 
 - **HTTP port 8080** — plain HTTP (Option A)
 - **HTTPS port 9443** — TLS-encrypted (Option B)
@@ -58,19 +57,19 @@ Creates an Istio gateway pod with a LoadBalancer IP (`192.168.2.203` via MetalLB
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: game-gateway
-  namespace: kuickbank
+  name: ext-vm-gateway
+  namespace: demo-ext-vm
 spec:
-  gatewayClassName: istio            # Uses Istio as the Gateway API provider
+  gatewayClassName: istio
   listeners:
-  - name: game
-    hostname: game.demo.bylo.de      # Only accepts requests for this hostname
+  - name: ext-vm
+    hostname: ext-vm.demo.bylo.de
     port: 443
     protocol: HTTPS
     tls:
-      mode: Terminate                # Gateway terminates client TLS
+      mode: Terminate
       certificateRefs:
-      - name: game-gateway-tls       # Secret created automatically by TLSPolicy
+      - name: ext-vm-gateway-tls
     allowedRoutes:
       namespaces:
         from: Same
@@ -78,28 +77,21 @@ spec:
 
 ### 2. DNSPolicy
 
-Publishes an A record for `game.demo.bylo.de` to CoreDNS and runs a health
-check against the gateway to verify the backend is reachable.
+Publishes an A record for `ext-vm.demo.bylo.de` to CoreDNS.
 
 ```yaml
 apiVersion: kuadrant.io/v1
 kind: DNSPolicy
 metadata:
-  name: game-dns
-  namespace: kuickbank
+  name: ext-vm-dns
+  namespace: demo-ext-vm
 spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: Gateway
-    name: game-gateway
+    name: ext-vm-gateway
   providerRefs:
-  - name: coredns-credentials         # Secret with CoreDNS zone config
-  healthCheck:
-    failureThreshold: 3               # Mark unhealthy after 3 consecutive failures
-    interval: 60s                     # Probe every 60 seconds
-    path: /login                      # Returns 200 (root / returns 302 which fails the probe)
-    port: 443
-    protocol: HTTPS
+  - name: coredns-credentials
 ```
 
 > **Note:** No `loadBalancing` section because this route only exists on
@@ -114,17 +106,17 @@ hostname via cert-manager.
 apiVersion: kuadrant.io/v1
 kind: TLSPolicy
 metadata:
-  name: game-tls
-  namespace: kuickbank
+  name: ext-vm-tls
+  namespace: demo-ext-vm
 spec:
   targetRef:
     group: gateway.networking.k8s.io
     kind: Gateway
-    name: game-gateway
+    name: ext-vm-gateway
   issuerRef:
     group: cert-manager.io
     kind: ClusterIssuer
-    name: selfsigned-issuer           # Replace with a real CA for production
+    name: selfsigned-issuer
 ```
 
 ---
@@ -139,17 +131,17 @@ Only 2 additional resources needed. This is the simplest configuration.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: game
-  namespace: kuickbank
+  name: ext-vm
+  namespace: demo-ext-vm
 spec:
   parentRefs:
-  - name: game-gateway
+  - name: ext-vm-gateway
   hostnames:
-  - game.demo.bylo.de
+  - ext-vm.demo.bylo.de
   rules:
   - backendRefs:
-    - name: game-external
-      port: 8080                      # VM's HTTP port
+    - name: ext-vm-backend
+      port: 8080
 ```
 
 ### Headless Service + EndpointSlice
@@ -158,10 +150,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: game-external
-  namespace: kuickbank
+  name: ext-vm-backend
+  namespace: demo-ext-vm
 spec:
-  clusterIP: None                     # Headless — no cluster IP allocated
+  clusterIP: None
   ports:
   - port: 8080
     targetPort: 8080
@@ -170,14 +162,14 @@ spec:
 apiVersion: discovery.k8s.io/v1
 kind: EndpointSlice
 metadata:
-  name: game-external-1
-  namespace: kuickbank
+  name: ext-vm-backend-1
+  namespace: demo-ext-vm
   labels:
-    kubernetes.io/service-name: game-external
+    kubernetes.io/service-name: ext-vm-backend
 addressType: IPv4
 endpoints:
 - addresses:
-  - "192.168.2.36"                    # VM's lab network IP
+  - "192.168.2.36"
 ports:
 - port: 8080
   protocol: TCP
@@ -198,17 +190,17 @@ originate TLS when connecting to the backend.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: game
-  namespace: kuickbank
+  name: ext-vm
+  namespace: demo-ext-vm
 spec:
   parentRefs:
-  - name: game-gateway
+  - name: ext-vm-gateway
   hostnames:
-  - game.demo.bylo.de
+  - ext-vm.demo.bylo.de
   rules:
   - backendRefs:
-    - name: game-external
-      port: 9443                      # VM's HTTPS port
+    - name: ext-vm-backend
+      port: 9443
 ```
 
 ### Headless Service + EndpointSlice
@@ -217,27 +209,27 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: game-external
-  namespace: kuickbank
+  name: ext-vm-backend
+  namespace: demo-ext-vm
 spec:
   clusterIP: None
   ports:
   - port: 9443
     targetPort: 9443
     protocol: TCP
-    appProtocol: https                # Tells Istio the backend speaks HTTPS
+    appProtocol: https
 ---
 apiVersion: discovery.k8s.io/v1
 kind: EndpointSlice
 metadata:
-  name: game-external-1
-  namespace: kuickbank
+  name: ext-vm-backend-1
+  namespace: demo-ext-vm
   labels:
-    kubernetes.io/service-name: game-external
+    kubernetes.io/service-name: ext-vm-backend
 addressType: IPv4
 endpoints:
 - addresses:
-  - "192.168.2.36"                    # VM's lab network IP
+  - "192.168.2.36"
 ports:
 - port: 9443
   protocol: TCP
@@ -252,26 +244,19 @@ to the backend.
 apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:
-  name: game-external-tls
-  namespace: kuickbank
+  name: ext-vm-backend-tls
+  namespace: demo-ext-vm
 spec:
-  host: game-external.kuickbank.svc.cluster.local   # Matches the k8s Service FQDN
+  host: ext-vm-backend.demo-ext-vm.svc.cluster.local
   trafficPolicy:
     tls:
-      mode: SIMPLE                    # Originate TLS (no client cert / no mTLS)
-      sni: game.bylo.de              # SNI the backend's TLS cert expects
+      mode: SIMPLE
     portLevelSettings:
     - port:
         number: 9443
       tls:
         mode: SIMPLE
-        sni: game.bylo.de
 ```
-
-> **Key values:**
-> - `mode: SIMPLE` — standard TLS without mutual authentication
-> - `sni: game.bylo.de` — the Server Name Indication sent during the TLS
->   handshake; must match the backend's certificate CN/SAN
 
 **Total: 6 resources** (Gateway, DNSPolicy, TLSPolicy, HTTPRoute, Service+EndpointSlice, DestinationRule)
 
@@ -290,16 +275,16 @@ From the bastion (or any host that can reach `192.168.2.203`):
 
 ```bash
 # Direct test using gateway IP
-curl -sk --resolve game.demo.bylo.de:443:192.168.2.203 https://game.demo.bylo.de/
+curl -sk --resolve ext-vm.demo.bylo.de:443:192.168.2.203 https://ext-vm.demo.bylo.de/
 
 # Via CoreDNS (if DNS delegation is configured)
-curl -sk https://game.demo.bylo.de/
+curl -sk https://ext-vm.demo.bylo.de/
 ```
 
 From a browser, add to `/etc/hosts`:
 
 ```
-192.168.2.203  game.demo.bylo.de
+192.168.2.203  ext-vm.demo.bylo.de
 ```
 
-Then visit `https://game.demo.bylo.de` (accept the self-signed cert warning).
+Then visit `https://ext-vm.demo.bylo.de` (accept the self-signed cert warning).
