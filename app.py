@@ -27,7 +27,7 @@ MASTER_PASSWORD = os.environ.get('MASTER_PASSWORD', '')
 CLUSTER_NAME = os.environ.get('CLUSTER_NAME', socket.gethostname())
 APP_COLOR = os.environ.get('APP_COLOR', 'blue')
 RESET_INTERVAL = int(os.environ.get('RESET_INTERVAL', '600'))
-RATE_LIMIT_DEFAULT = os.environ.get('RATE_LIMIT_ENABLED', 'true').lower() == 'true'
+RATE_LIMIT_DEFAULT = os.environ.get('RATE_LIMIT_ENABLED', 'false').lower() == 'true'
 
 MAX_TRANSACTION = 50000
 SEED_BALANCE = 10000

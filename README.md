@@ -294,3 +294,4 @@ To change the interval, set the ``RESET_INTERVAL`` environment variable (in seco
 RESET_INTERVAL=300 python app.py    # reset every 5 minutes
 RESET_INTERVAL=0 python app.py      # no auto-reset
 ```
+
