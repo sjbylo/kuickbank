@@ -24,6 +24,9 @@ spec:
           value: "my-cluster"
         - name: APP_COLOR
           value: "blue"
+        volumeMounts:
+        - name: data
+          mountPath: /opt/app-root/src/data
         livenessProbe:
           httpGet:
             path: /health
@@ -43,3 +46,6 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "500m"
+      volumes:
+      - name: data
+        emptyDir: {}
