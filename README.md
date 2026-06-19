@@ -19,30 +19,22 @@ git clone https://github.com/sjbylo/kuickbank
 cd kuickbank
 ```
 
-Install the dependencies:
+Create a virtual environment and install the dependencies:
 
 ```
-pip install flask
-pip install flask-sqlalchemy
-pip install flask-limiter
-pip install pg8000
-pip install PyMySQL
-```
-
-or install from the requirements file:
-
-```
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-and start the application:
+Start the application:
 
 ```
 python app.py
 Check if account already exists in the db
 Seeding database with initial data ...
-Auto-reset enabled: every 600 seconds
-Rate limiting: ON
+Auto-reset disabled
+Rate limiting: OFF (global, stored in DB)
 Database: sqlite (internal)
 Cluster: my-laptop | Color: blue
  * Running on http://0.0.0.0:8080/ (Press CTRL+C to quit)
@@ -129,7 +121,7 @@ The seed data directory can be mounted as an external volume:
 
 ```
 cp seeds/seed_data.json /tmp/
-podman run -d -p 8080:8080 -v /tmp:/app/seeds:Z --name=kuickbank kuickbank:latest
+podman run -d -p 8080:8080 -v /tmp:/opt/app-root/src/seeds:Z --name=kuickbank kuickbank:latest
 ```
 
 An external PostgreSQL database can be used instead of the internal SQLite by setting env variables:
@@ -152,7 +144,9 @@ podman stop kuickbank && podman rm kuickbank
 
 ## Install the app onto OpenShift
 
-Build and launch the app:
+The S2I (source-to-image) build and the binary build methods below require the internal image registry to be enabled on the cluster. Check with: ``oc get configs.imageregistry.operator.openshift.io/cluster -o jsonpath='{.spec.managementState}'`` (should return ``Managed``).
+
+Build and launch the app using S2I:
 
 ```
 oc new-app python~https://github.com/sjbylo/kuickbank.git --name kuickbank
@@ -242,8 +236,8 @@ To re-build the app on the server, run the above ``oc start-build`` command agai
 | `DB_TYPE` | `sqlite` | `sqlite`, `postgresql`, or `mysql` |
 | `CLUSTER_NAME` | _(hostname)_ | Displayed in UI header badge |
 | `APP_COLOR` | `blue` | Header badge color (e.g. `blue`, `green`, `red`) |
-| `RESET_INTERVAL` | `600` | Auto-reset interval in seconds (`0` to disable) |
-| `RATE_LIMIT_ENABLED` | `true` | Enable built-in rate limiting on startup |
+| `RESET_INTERVAL` | `0` _(disabled)_ | Auto-reset interval in seconds (`0` to disable) |
+| `RATE_LIMIT_ENABLED` | `false` | Enable built-in rate limiting on startup |
 
 ## Seed data
 
@@ -272,7 +266,7 @@ The format is:
 
 ## Rate limiting
 
-Built-in rate limiting prevents click-spam. It defaults to ON and allows a maximum of 1 transaction every 5 seconds and 10 transactions per minute per IP address.
+Built-in rate limiting prevents click-spam. It defaults to OFF and allows a maximum of 1 transaction every 5 seconds and 10 transactions per minute per IP address when enabled.
 
 Toggle rate limiting at runtime:
 
@@ -286,12 +280,13 @@ The current rate limiting state is also shown in the page footer.
 
 ## Auto-reset
 
-The account balance resets to its seed value (default $10,000) and transactions are cleared automatically every 10 minutes. A countdown timer is shown in the page footer.
+Auto-reset is disabled by default. When enabled, the account balance resets to its seed value (default $10,000) and transactions are cleared at the configured interval. A countdown timer is shown in the page footer.
 
-To change the interval, set the ``RESET_INTERVAL`` environment variable (in seconds). Set to ``0`` to disable auto-reset.
+Set the ``RESET_INTERVAL`` environment variable (in seconds) to enable auto-reset:
 
 ```
 RESET_INTERVAL=300 python app.py    # reset every 5 minutes
-RESET_INTERVAL=0 python app.py      # no auto-reset
+RESET_INTERVAL=600 python app.py    # reset every 10 minutes
+python app.py                       # no auto-reset (default)
 ```
 
