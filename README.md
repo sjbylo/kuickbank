@@ -229,6 +229,7 @@ To re-build the app on the server, run the above ``oc start-build`` command agai
 [Builds for Red Hat OpenShift](https://docs.redhat.com/en/documentation/builds_for_red_hat_openshift/) uses the Shipwright framework and provides a Kubernetes-native way to build container images from source code using strategies such as Buildah or S2I.
 
 Prerequisites:
+- The Red Hat OpenShift Pipelines Operator must be installed (Shipwright depends on Tekton).
 - The Builds for Red Hat OpenShift Operator must be installed and a ``ShipwrightBuild`` resource created.
 - The internal image registry must be enabled (or configure an external registry with a push secret).
 - Check available strategies: ``oc get clusterbuildstrategy``
