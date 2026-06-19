@@ -224,6 +224,52 @@ open http://$QUICKBANK_URL/
 Now, make changes to the local file(s) and re-build the app.
 To re-build the app on the server, run the above ``oc start-build`` command again.
 
+## Build with Shipwright (Builds for Red Hat OpenShift)
+
+[Builds for Red Hat OpenShift](https://docs.redhat.com/en/documentation/builds_for_red_hat_openshift/) uses the Shipwright framework and provides a Kubernetes-native way to build container images from source code using strategies such as Buildah or S2I.
+
+Prerequisites:
+- The Builds for Red Hat OpenShift Operator must be installed and a ``ShipwrightBuild`` resource created.
+- The internal image registry must be enabled (or configure an external registry with a push secret).
+- Check available strategies: ``oc get clusterbuildstrategy``
+
+Create the Build resource (replace ``<your-namespace>`` with your project name):
+
+```
+NAMESPACE=$(oc project -q)
+sed "s/<your-namespace>/$NAMESPACE/" k8s/shipwright/build.yaml | oc apply -f -
+```
+
+Trigger a build:
+
+```
+oc apply -f k8s/shipwright/buildrun.yaml
+```
+
+Monitor the build:
+
+```
+oc get buildrun kuickbank-buildrun-1 -w
+```
+
+Once the build completes, deploy the app:
+
+```
+oc new-app kuickbank --name kuickbank
+oc expose svc kuickbank
+```
+
+Test the app:
+
+```
+QUICKBANK_URL=$(oc get route kuickbank --template='{{.spec.host}}')
+./test-kuickbank.sh http://$QUICKBANK_URL
+```
+
+To rebuild after code changes, push to Git and create a new ``BuildRun`` (increment the name, e.g. ``kuickbank-buildrun-2``).
+
+The Shipwright YAML manifests are located under ``k8s/shipwright/``.
+
 ## Environment variables
 
 | Variable | Default | Description |

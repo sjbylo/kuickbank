@@ -1,0 +1,20 @@
+# Shipwright Build for KuickBank
+# Before applying, replace <your-namespace> with your project name, e.g.:
+#   sed 's/<your-namespace>/myproject/' k8s/shipwright/build.yaml | oc apply -f -
+apiVersion: shipwright.io/v1beta1
+kind: Build
+metadata:
+  name: kuickbank
+spec:
+  source:
+    type: Git
+    git:
+      url: https://github.com/sjbylo/kuickbank.git
+  strategy:
+    name: buildah
+    kind: ClusterBuildStrategy
+  paramValues:
+  - name: dockerfile
+    value: Dockerfile
+  output:
+    image: image-registry.openshift-image-registry.svc:5000/<your-namespace>/kuickbank:latest
