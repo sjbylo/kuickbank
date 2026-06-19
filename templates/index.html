@@ -110,11 +110,11 @@
 
 <script>
 var autoRefreshTimer = null;
-var autoRefreshOn = localStorage.getItem('autoRefresh') !== 'off';
+var autoRefreshOn = sessionStorage.getItem('autoRefresh') !== 'off';
 
 function toggleAutoRefresh() {
     autoRefreshOn = !autoRefreshOn;
-    localStorage.setItem('autoRefresh', autoRefreshOn ? 'on' : 'off');
+    sessionStorage.setItem('autoRefresh', autoRefreshOn ? 'on' : 'off');
     updateRefreshState();
 }
 
