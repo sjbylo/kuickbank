@@ -35,6 +35,9 @@ SEED_BALANCE = 10000
 # ---------------------------------------------------------------------------
 # Database URI
 # ---------------------------------------------------------------------------
+_data_dir = Path(__file__).parent / 'data'
+_data_dir.mkdir(exist_ok=True)
+
 if ENDPOINT_ADDRESS:
     if DB_TYPE == 'postgresql':
         db_uri = f'postgresql+pg8000://{MASTER_USERNAME}:{MASTER_PASSWORD}@{ENDPOINT_ADDRESS}:{PORT}/{DB_NAME}'
@@ -388,9 +391,6 @@ def ratelimit_handler(e):
 # Main
 # ---------------------------------------------------------------------------
 if __name__ == '__main__':
-    data_dir = Path(__file__).parent / 'data'
-    data_dir.mkdir(exist_ok=True)
-
     with app.app_context():
         print("Check if account already exists in the db")
         db.create_all()

@@ -161,7 +161,7 @@ oc new-app python~https://github.com/sjbylo/kuickbank.git --name kuickbank
 As an alternative to the above build, pull the latest image from quay.io registry:
 
 ```
-oc new-app --docker-image=quay.io/sjbylo/kuickbank:latest --name kuickbank
+oc new-app --image=quay.io/sjbylo/kuickbank:latest --name kuickbank
 ```
 
 Expose the app to the external network:
