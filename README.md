@@ -228,15 +228,20 @@ To re-build the app on the server, run the above ``oc start-build`` command agai
 
 [Builds for Red Hat OpenShift](https://docs.redhat.com/en/documentation/builds_for_red_hat_openshift/) uses the Shipwright framework and provides a Kubernetes-native way to build container images from source code using strategies such as Buildah or S2I.
 
-Prerequisites:
-- The Red Hat OpenShift Pipelines Operator must be installed (Shipwright depends on Tekton).
-- The Builds for Red Hat OpenShift Operator must be installed and a ``ShipwrightBuild`` resource created.
-- The internal image registry must be enabled (or configure an external registry with a push secret).
-- Check available strategies: ``oc get clusterbuildstrategy``
+Before using Shipwright, you must complete the one-time setup described in [Setting up Shipwright](#setting-up-shipwright-one-time) at the bottom of this README.
 
-Create the Build resource (replace ``<your-namespace>`` with your project name):
+Verify that the setup is complete:
 
 ```
+oc get clusterbuildstrategy
+```
+
+You should see at least ``buildah`` in the list. If not, follow the setup steps first.
+
+Create a new project and the Build resource:
+
+```
+oc new-project myproject
 NAMESPACE=$(oc project -q)
 sed "s/<your-namespace>/$NAMESPACE/" k8s/shipwright/build.yaml | oc apply -f -
 ```
@@ -253,7 +258,7 @@ Monitor the build:
 oc get buildrun kuickbank-buildrun-1 -w
 ```
 
-Once the build completes, deploy the app:
+Once the build completes (``Succeeded``), deploy the app:
 
 ```
 oc new-app kuickbank --name kuickbank
@@ -336,5 +341,124 @@ RESET_INTERVAL=300 python app.py    # reset every 5 minutes
 RESET_INTERVAL=600 python app.py    # reset every 10 minutes
 python app.py                       # no auto-reset (default)
 ```
+
+## Setting up Shipwright (one-time)
+
+These steps install the required operators and configure the cluster for Shipwright builds. You only need to do this once per cluster.
+
+### 1. Enable the internal image registry
+
+The internal registry stores the images that Shipwright builds produce. On clusters where it is disabled (common on Single Node OpenShift), enable it:
+
+```
+oc get configs.imageregistry.operator.openshift.io/cluster \
+  -o jsonpath='{.spec.managementState}'
+```
+
+If it returns ``Removed``, enable it with ``emptyDir`` storage (suitable for testing):
+
+```
+oc patch configs.imageregistry.operator.openshift.io/cluster \
+  --type merge \
+  -p '{"spec":{"managementState":"Managed","storage":{"emptyDir":{}},"replicas":1}}'
+```
+
+Wait for the registry pod to start:
+
+```
+oc get pods -n openshift-image-registry -w
+```
+
+### 2. Install the OpenShift Pipelines Operator
+
+Shipwright depends on Tekton (provided by OpenShift Pipelines):
+
+```
+oc apply -f - <<EOF
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-pipelines-operator
+  namespace: openshift-operators
+spec:
+  channel: latest
+  installPlanApproval: Automatic
+  name: openshift-pipelines-operator-rh
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+EOF
+```
+
+Wait for the Pipelines operator and Tekton to become ready:
+
+```
+oc get csv -n openshift-operators | grep pipelines
+oc get tektonconfig
+```
+
+The ``TektonConfig`` should show ``True`` in the READY column.
+
+### 3. Install the Builds for Red Hat OpenShift Operator
+
+```
+oc apply -f - <<EOF
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-builds
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-builds
+  namespace: openshift-builds
+spec: {}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-builds-operator
+  namespace: openshift-builds
+spec:
+  channel: latest
+  installPlanApproval: Automatic
+  name: openshift-builds-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+EOF
+```
+
+Wait for the operator to install:
+
+```
+oc get csv -n openshift-builds | grep builds
+```
+
+It should show ``Succeeded``.
+
+### 4. Create the ShipwrightBuild resource
+
+This tells the operator to deploy the Shipwright build controller:
+
+```
+oc apply -f - <<EOF
+apiVersion: operator.shipwright.io/v1alpha1
+kind: ShipwrightBuild
+metadata:
+  name: cluster
+spec:
+  targetNamespace: openshift-builds
+EOF
+```
+
+Wait for the build strategies to become available:
+
+```
+oc get clusterbuildstrategy
+```
+
+You should see ``buildah``, ``buildpacks``, and ``buildpacks-extender``. If ``clusterbuildstrategy`` is not recognized, the Shipwright controller is still starting -- wait a minute and try again.
+
+Once you see the strategies, the setup is complete and you can follow the steps in [Build with Shipwright](#build-with-shipwright-builds-for-red-hat-openshift) above.
 
 
