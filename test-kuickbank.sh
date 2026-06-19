@@ -1,35 +1,41 @@
 #!/bin/bash
 # Simple smoke test for KuickBank
 # Usage: ./test-kuickbank.sh [URL]
+# Uses -sk so the script works with self-signed certs (OpenShift routes).
 
 URL=${1:-http://localhost:8080}
+CURL="curl -sk"
 
-echo "Testing KuickBank at $URL"
+# Resolve the final URL (follow any HTTP→HTTPS redirect) for GET requests
+BASE=$($CURL -o /dev/null -w "%{url_effective}" -L "$URL/health")
+BASE=${BASE%/health}
+
+echo "Testing KuickBank at $URL (effective: $BASE)"
 echo "================================"
 
 echo -n "Health check ... "
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/health")
+STATUS=$($CURL -o /dev/null -w "%{http_code}" "$BASE/health")
 [ "$STATUS" = "200" ] && echo "OK ($STATUS)" || echo "FAIL ($STATUS)"
 
 echo -n "Home page ... "
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/")
+STATUS=$($CURL -o /dev/null -w "%{http_code}" "$BASE/")
 [ "$STATUS" = "200" ] && echo "OK ($STATUS)" || echo "FAIL ($STATUS)"
 
 echo -n "Deposit \$100 ... "
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -d "amount=100" "$URL/deposit")
+STATUS=$($CURL -o /dev/null -w "%{http_code}" -X POST -d "amount=100" "$BASE/deposit")
 [ "$STATUS" = "302" ] && echo "OK (redirect $STATUS)" || echo "FAIL ($STATUS)"
 
 echo -n "Withdraw \$50 ... "
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -d "amount=50" "$URL/withdraw")
+STATUS=$($CURL -o /dev/null -w "%{http_code}" -X POST -d "amount=50" "$BASE/withdraw")
 [ "$STATUS" = "302" ] && echo "OK (redirect $STATUS)" || echo "FAIL ($STATUS)"
 
 echo -n "Rate limit status ... "
-RLSTATUS=$(curl -s "$URL/admin/ratelimit/status")
+RLSTATUS=$($CURL "$BASE/admin/ratelimit/status")
 echo "$RLSTATUS"
 
 echo ""
 echo "Verify balance:"
-curl -s "$URL/health"
+$CURL "$BASE/health"
 echo ""
 
 echo "================================"
